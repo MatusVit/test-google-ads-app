@@ -7,10 +7,10 @@ export const generateToken = (payload: JWTPayload): string => {
   return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
 };
 
-export const verifyToken = (token: string): TokenVerificationResult => {
+export const verifyToken = (token: string): any => {
   try {
-    return jwt.verify(token, config.jwt.secret) as JWTPayload;
-  } catch (error) {
+    return jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+  } catch {
     return null;
   }
 };

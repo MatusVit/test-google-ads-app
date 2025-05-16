@@ -25,6 +25,7 @@ router.get('/:managedAccountId', isAuthenticated, async (req, res) => {
     });
     res.json(campaigns);
   } catch (error) {
+    console.error(error?.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,21 +1,33 @@
 import { Sequelize } from 'sequelize';
 import { Umzug, SequelizeStorage } from 'umzug';
 import path from 'path';
+import { fileURLToPath, pathToFileURL } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export const initMigrations = async (sequelize: Sequelize) => {
+  const queryInterface = sequelize.getQueryInterface();
+
   const umzug = new Umzug({
     migrations: {
       glob: ['../migrations/*.js', { cwd: __dirname }],
-      resolve: ({ name, path, context }) => {
-        const migration = require(path!);
+      resolve: ({ name, path }) => {
+        const fileUrl = pathToFileURL(path!).toString();
         return {
           name,
-          up: async () => migration.up(context.queryInterface, context.sequelize),
-          down: async () => migration.down(context.queryInterface, context.sequelize),
+          async up() {
+            const migration = await import(fileUrl);
+            return migration.up(queryInterface, Sequelize);
+          },
+          async down() {
+            const migration = await import(fileUrl);
+            return migration.down(queryInterface, Sequelize);
+          }
         };
       },
     },
-    context: sequelize.getQueryInterface(),
+    context: queryInterface,
     storage: new SequelizeStorage({ sequelize }),
     logger: console,
   });

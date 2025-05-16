@@ -1,5 +1,5 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import { CampaignAttributes, CampaignInstance, CampaignModel } from './campaign.types';
+import { CampaignAttributes } from './campaign.types';
 
 export class Campaign extends Model<CampaignAttributes> implements CampaignAttributes {
   public id!: number;

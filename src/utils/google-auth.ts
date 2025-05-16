@@ -33,7 +33,7 @@ export const getGoogleUserInfo = async (idToken: string): Promise<GoogleUserInfo
       idToken,
       audience: config.google.clientId,
     });
-    
+
     const payload = ticket.getPayload();
     if (!payload) return null;
 
@@ -47,4 +47,4 @@ export const getGoogleUserInfo = async (idToken: string): Promise<GoogleUserInfo
     console.error('Error verifying Google token:', error);
     return null;
   }
-}; 
+};

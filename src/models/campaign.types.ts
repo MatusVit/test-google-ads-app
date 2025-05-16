@@ -1,6 +1,6 @@
 import { Model } from 'sequelize';
 
-export interface CampaignAttributes {
+export interface CampaignAttributes extends Model {
   id: number;
   managedAccountId: number;
   campaignId: string;
@@ -9,13 +9,4 @@ export interface CampaignAttributes {
   budget?: number;
   startDate?: Date;
   endDate?: Date;
-}
-
-export interface CampaignInstance extends Model<CampaignAttributes>, CampaignAttributes {
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-}
-
-export interface CampaignModel extends Model<CampaignAttributes, CampaignAttributes> {
-  associate(models: any): void;
 }

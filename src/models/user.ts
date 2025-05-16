@@ -1,6 +1,6 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import bcrypt from 'bcryptjs';
-import { UserAttributes, UserCreationAttributes, UserInstance } from './user.types';
+import { UserAttributes, UserCreationAttributes } from './user.types';
 
 export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
   public id!: number;
@@ -18,7 +18,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   static associate(models: any) {
     User.hasMany(models.ManagedAccount, {
       foreignKey: 'userId',
-      as: 'managedAccounts'
+      as: 'managedAccounts',
     });
   }
 
@@ -77,7 +77,7 @@ export default function (sequelize: Sequelize): typeof User {
           }
         },
       },
-    }
+    },
   );
 
   return User;

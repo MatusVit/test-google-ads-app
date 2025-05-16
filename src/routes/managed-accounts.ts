@@ -32,14 +32,16 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
   try {
     const accounts = await models.ManagedAccount.findAll({
       where: { userId: req.user!.id },
-      include: [{
-        model: models.Campaign,
-        as: 'campaigns'
-      }]
+      include: [
+        {
+          model: models.Campaign,
+          as: 'campaigns',
+        },
+      ],
     });
     res.json(accounts);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching managed accounts' });
+  } catch {
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -110,8 +112,8 @@ router.get('/callback', authenticate, async (req: AuthRequest, res) => {
     const existingAccount = await models.ManagedAccount.findOne({
       where: {
         userId: req.user!.id,
-        managedGoogleId: userInfo.sub
-      }
+        managedGoogleId: userInfo.sub,
+      },
     });
 
     if (existingAccount) {
@@ -123,12 +125,12 @@ router.get('/callback', authenticate, async (req: AuthRequest, res) => {
       managedGoogleId: userInfo.sub,
       managedEmail: userInfo.email,
       accessToken: tokens.access_token,
-      refreshToken: tokens.refresh_token
+      refreshToken: tokens.refresh_token,
     });
 
     res.redirect(`${process.env.FRONTEND_URL}/dashboard/accounts/${managedAccount.id}`);
-  } catch (error) {
-    res.status(500).json({ message: 'Error adding managed account' });
+  } catch {
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 
@@ -170,8 +172,8 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res) => {
     const account = await models.ManagedAccount.findOne({
       where: {
         id,
-        userId: req.user!.id
-      }
+        userId: req.user!.id,
+      },
     });
 
     if (!account) {
@@ -180,8 +182,8 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res) => {
 
     await account.destroy();
     res.json({ message: 'Managed account deleted successfully' });
-  } catch (error) {
-    res.status(500).json({ message: 'Error deleting managed account' });
+  } catch {
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

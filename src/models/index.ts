@@ -2,9 +2,10 @@ import { Sequelize } from 'sequelize';
 import User from './user';
 import ManagedAccount from './managed-account';
 import Campaign from './campaign';
+import databaseConfig from '../config/database.js';
 
 const env = process.env.NODE_ENV || 'development';
-const config = require('../config/database')[env];
+const config = databaseConfig[env];
 
 const sequelize = new Sequelize(config.database, config.username, config.password, {
   host: config.host,

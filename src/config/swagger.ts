@@ -72,4 +72,4 @@ const options: swaggerJsdoc.Options = {
   apis: ['./src/routes/*.ts'], // путь к файлам с маршрутами
 };
 
-export const swaggerSpec = swaggerJsdoc(options); 
+export const swaggerSpec = swaggerJsdoc(options);

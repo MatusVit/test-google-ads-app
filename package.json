@@ -3,18 +3,17 @@
   "version": "1.0.0",
   "description": "Google Ads Management Application",
   "main": "dist/index.js",
+  "type": "module",
   "scripts": {
     "start": "node dist/index.js",
-    "dev": "ts-node-dev --respawn src/index.ts",
+    "dev": "cross-env NODE_ENV=development node --loader ts-node/esm src/index.ts",
     "build": "tsc",
     "migrate": "sequelize-cli db:migrate",
     "migrate:undo": "sequelize-cli db:migrate:undo",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "check-types": "tsc --noEmit",
-    "db:run": "docker-compose up -d",
-    "db:down": "docker-compose down"
+    "check-types": "tsc --noEmit"
   },
   "dependencies": {
     "axios": "^1.4.0",
@@ -44,6 +43,7 @@
     "@types/swagger-ui-express": "^4.1.8",
     "@typescript-eslint/eslint-plugin": "^8.32.1",
     "@typescript-eslint/parser": "^8.32.1",
+    "cross-env": "^7.0.3",
     "eslint": "^9.26.0",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-prettier": "^5.4.0",

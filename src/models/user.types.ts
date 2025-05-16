@@ -1,6 +1,6 @@
 import { Model } from 'sequelize';
 
-export interface UserAttributes {
+export interface UserAttributes extends Model {
   id: number;
   googleId?: string;
   email: string;
@@ -13,14 +13,4 @@ export interface UserAttributes {
 
 export interface UserCreationAttributes extends Omit<UserAttributes, 'id'> {
   id?: number;
-}
-
-export interface UserInstance extends Model<UserAttributes, UserCreationAttributes>, UserAttributes {
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-  comparePassword(candidatePassword: string): Promise<boolean>;
-}
-
-export interface UserModel extends Model<UserAttributes, UserCreationAttributes> {
-  associate(models: any): void;
 }

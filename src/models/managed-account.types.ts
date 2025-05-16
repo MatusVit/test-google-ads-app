@@ -1,6 +1,6 @@
 import { Model } from 'sequelize';
 
-export interface ManagedAccountAttributes {
+export interface ManagedAccountAttributes extends Model {
   id: number;
   userId: number;
   managedGoogleId: string;
@@ -8,16 +8,4 @@ export interface ManagedAccountAttributes {
   accessToken?: string;
   refreshToken?: string;
   adsAccountId?: string;
-}
-
-export interface ManagedAccountInstance
-  extends Model<ManagedAccountAttributes>,
-    ManagedAccountAttributes {
-  readonly createdAt: Date;
-  readonly updatedAt: Date;
-}
-
-export interface ManagedAccountModel
-  extends Model<ManagedAccountAttributes, ManagedAccountAttributes> {
-  associate(models: any): void;
 }

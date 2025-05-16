@@ -1,9 +1,5 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import {
-  ManagedAccountAttributes,
-  ManagedAccountInstance,
-  ManagedAccountModel,
-} from './managed-account.types';
+import { ManagedAccountAttributes } from './managed-account.types';
 
 export class ManagedAccount
   extends Model<ManagedAccountAttributes>

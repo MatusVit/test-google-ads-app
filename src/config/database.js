@@ -1,6 +1,6 @@
-const config = require('./app').default;
+import config from './app.js';
 
-module.exports = {
+export default {
   development: {
     ...config.database.development,
     logging: false

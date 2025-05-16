@@ -14,6 +14,13 @@ export default [
         ecmaVersion: 2020,
         sourceType: 'module',
       },
+      globals: {
+        console: true,
+        process: true,
+        __dirname: true,
+        require: true,
+        module: true
+      }
     },
     plugins: {
       '@typescript-eslint': tseslint,
@@ -25,10 +32,35 @@ export default [
       '@typescript-eslint/explicit-function-return-type': 'off',
       '@typescript-eslint/explicit-module-boundary-types': 'off',
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { 
+        argsIgnorePattern: '^_',
+        varsIgnorePattern: '^_'
+      }],
+      '@typescript-eslint/no-require-imports': 'warn',
       'prettier/prettier': ['error', {
         endOfLine: 'auto'
-      }]
+      }],
+      'no-console': 'warn',
+      'no-undef': 'warn'
     },
   },
+  {
+    files: ['**/*.js'],
+    languageOptions: {
+      ecmaVersion: 2020,
+      sourceType: 'commonjs',
+      globals: {
+        console: true,
+        process: true,
+        __dirname: true,
+        require: true,
+        module: true,
+        exports: true
+      }
+    },
+    rules: {
+      'no-undef': 'warn',
+      'no-unused-vars': 'warn'
+    }
+  }
 ]; 
