@@ -1,8 +1,10 @@
-import { Router } from 'express';
+import { Router, Response } from 'express';
 import { authenticate } from '../middleware/auth';
-import { getGoogleAuthUrl, getGoogleTokens, getGoogleUserInfo } from '../utils/google-auth';
+import { getGoogleAuthUrl, getGoogleTokens } from '../utils/google-auth';
 import models from '../models';
 import { AuthRequest } from '../middleware/auth.types';
+import { ManagedAccountCreationAttributes } from '../models/managed-account.types';
+import { google } from 'googleapis';
 
 const router = Router();
 
@@ -95,42 +97,61 @@ router.get('/add', authenticate, (_req, res) => {
  *       401:
  *         description: Unauthorized
  */
-router.get('/callback', authenticate, async (req: AuthRequest, res) => {
+router.get('/callback', authenticate, async (req: AuthRequest, res: Response): Promise<Response | void> => {
   try {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
-      return res.status(400).json({ message: 'Invalid authorization code' });
+      return res.status(400).json({ error: 'Invalid authorization code' });
     }
 
     const tokens = await getGoogleTokens(code);
-    const userInfo = await getGoogleUserInfo(tokens.id_token!);
-
-    if (!userInfo || !userInfo.sub || !userInfo.email) {
-      return res.status(400).json({ message: 'Invalid user information' });
+    if (!tokens.access_token) {
+      return res.status(400).json({ error: 'Invalid tokens received' });
     }
 
-    const existingAccount = await models.ManagedAccount.findOne({
+    const auth = new google.auth.OAuth2();
+    auth.setCredentials({
+      access_token: tokens.access_token,
+      refresh_token: tokens.refresh_token,
+    });
+
+    const adsService = (google as any).adwords({
+      version: 'v14',
+      auth,
+    });
+
+    const response = await adsService.managedCustomerService.get({});
+    const managedAccounts = response.data.entries || [];
+
+    const existingManagedAccount = await models.ManagedAccount.findOne({
       where: {
         userId: req.user!.id,
-        managedGoogleId: userInfo.sub,
+        managedGoogleId: managedAccounts[0].customerId,
       },
     });
 
-    if (existingAccount) {
-      return res.status(400).json({ message: 'This Google Ads account is already managed' });
+    if (existingManagedAccount) {
+      await existingManagedAccount.update({
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token,
+      });
+
+      return res.json(existingManagedAccount);
     }
 
-    const managedAccount = await models.ManagedAccount.create({
+    const managedAccountData: ManagedAccountCreationAttributes = {
       userId: req.user!.id,
-      managedGoogleId: userInfo.sub,
-      managedEmail: userInfo.email,
+      managedGoogleId: managedAccounts[0].customerId,
+      managedEmail: managedAccounts[0].customerName,
       accessToken: tokens.access_token,
       refreshToken: tokens.refresh_token,
-    });
+    };
 
-    res.redirect(`${process.env.FRONTEND_URL}/dashboard/accounts/${managedAccount.id}`);
-  } catch {
-    res.status(500).json({ message: 'Internal server error' });
+    const managedAccount = await models.ManagedAccount.create(managedAccountData);
+    return res.json(managedAccount);
+  } catch (error) {
+    console.error('Error linking Google Ads account:', error);
+    return res.status(500).json({ error: 'Error linking Google Ads account' });
   }
 });
 
@@ -166,24 +187,24 @@ router.get('/callback', authenticate, async (req: AuthRequest, res) => {
  *       404:
  *         description: Account not found
  */
-router.delete('/:id', authenticate, async (req: AuthRequest, res) => {
+router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
-    const { id } = req.params;
-    const account = await models.ManagedAccount.findOne({
+    const managedAccount = await models.ManagedAccount.findOne({
       where: {
-        id,
+        id: req.params.id,
         userId: req.user!.id,
       },
     });
 
-    if (!account) {
-      return res.status(404).json({ message: 'Managed account not found' });
+    if (!managedAccount) {
+      return res.status(404).json({ error: 'Managed account not found' });
     }
 
-    await account.destroy();
-    res.json({ message: 'Managed account deleted successfully' });
-  } catch {
-    res.status(500).json({ message: 'Internal server error' });
+    await managedAccount.destroy();
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting managed account:', error);
+    return res.status(500).json({ error: 'Error deleting managed account' });
   }
 });
 

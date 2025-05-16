@@ -5,6 +5,7 @@ export interface DatabaseConfig {
   password: string;
   database: string;
   dialect: 'mysql';
+  logging: boolean;
 }
 
 export interface Config {

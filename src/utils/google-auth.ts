@@ -24,7 +24,11 @@ export const getGoogleAuthUrl = (): string => {
 
 export const getGoogleTokens = async (code: string): Promise<GoogleTokens> => {
   const { tokens } = await client.getToken(code);
-  return tokens;
+  return {
+    access_token: tokens.access_token || undefined,
+    refresh_token: tokens.refresh_token || undefined,
+    id_token: tokens.id_token || undefined,
+  };
 };
 
 export const getGoogleUserInfo = async (idToken: string): Promise<GoogleUserInfo | null> => {

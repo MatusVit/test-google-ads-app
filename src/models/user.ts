@@ -1,19 +1,18 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
 import bcrypt from 'bcryptjs';
-import { UserAttributes, UserCreationAttributes } from './user.types';
+import { UserAttributes, UserCreationAttributes, UserInstance } from './user.types';
 
-export class User extends Model<UserAttributes, UserCreationAttributes> implements UserAttributes {
-  public id!: number;
-  public googleId!: string;
-  public email!: string;
-  public password!: string;
-  public name!: string;
-  public picture!: string;
-  public accessToken!: string;
-  public refreshToken!: string;
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+export class User extends Model<UserAttributes, UserCreationAttributes> implements UserInstance {
+  declare id: number;
+  declare googleId: string | null;
+  declare email: string;
+  declare password: string | null;
+  declare name: string;
+  declare picture: string | null;
+  declare accessToken: string | null;
+  declare refreshToken: string | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
   static associate(models: any) {
     User.hasMany(models.ManagedAccount, {
@@ -23,6 +22,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   }
 
   async comparePassword(candidatePassword: string): Promise<boolean> {
+    if (!this.password) return false;
     return bcrypt.compare(candidatePassword, this.password);
   }
 }
@@ -38,6 +38,7 @@ export default function (sequelize: Sequelize): typeof User {
       googleId: {
         type: DataTypes.STRING,
         unique: true,
+        allowNull: true,
       },
       email: {
         type: DataTypes.STRING,
@@ -54,12 +55,23 @@ export default function (sequelize: Sequelize): typeof User {
       },
       picture: {
         type: DataTypes.STRING,
+        allowNull: true,
       },
       accessToken: {
         type: DataTypes.TEXT,
+        allowNull: true,
       },
       refreshToken: {
         type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
     },
     {
@@ -68,12 +80,14 @@ export default function (sequelize: Sequelize): typeof User {
       hooks: {
         beforeCreate: async (user: User) => {
           if (user.password) {
-            user.password = await bcrypt.hash(user.password, 10);
+            const hashedPassword = await bcrypt.hash(user.password, 10);
+            user.password = hashedPassword;
           }
         },
         beforeUpdate: async (user: User) => {
-          if (user.changed('password')) {
-            user.password = await bcrypt.hash(user.password, 10);
+          if (user.changed('password') && user.password) {
+            const hashedPassword = await bcrypt.hash(user.password, 10);
+            user.password = hashedPassword;
           }
         },
       },

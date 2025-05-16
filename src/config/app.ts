@@ -16,6 +16,7 @@ const config: Config = {
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'google_ads_db',
       dialect: 'mysql',
+      logging: process.env.NODE_ENV === 'development',
     },
     test: {
       host: process.env.DB_HOST || 'localhost',
@@ -24,6 +25,7 @@ const config: Config = {
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'google_ads_db_test',
       dialect: 'mysql',
+      logging: false,
     },
     production: {
       host: process.env.DB_HOST || 'localhost',
@@ -32,6 +34,7 @@ const config: Config = {
       password: process.env.DB_PASSWORD || 'password',
       database: process.env.DB_NAME || 'google_ads_db',
       dialect: 'mysql',
+      logging: false,
     },
   },
 

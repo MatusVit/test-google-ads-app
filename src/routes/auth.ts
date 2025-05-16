@@ -1,9 +1,9 @@
-import { Router } from 'express';
-import bcrypt from 'bcryptjs';
+import { Router, Response } from 'express';
 import { getGoogleAuthUrl, getGoogleTokens, getGoogleUserInfo } from '../utils/google-auth';
 import { generateToken } from '../utils/jwt';
 import models from '../models';
 import { AuthRequest } from '../middleware/auth.types';
+import { UserCreationAttributes } from '../models/user.types';
 
 const router = Router();
 
@@ -52,7 +52,7 @@ const router = Router();
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/register', async (req, res) => {
+router.post('/register', async (req, res): Promise<Response> => {
   try {
     const { email, password, name } = req.body;
 
@@ -61,11 +61,17 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ message: 'User already exists' });
     }
 
-    const user = await models.User.create({
+    const userData: UserCreationAttributes = {
       email,
       password,
       name,
-    });
+      googleId: null,
+      picture: null,
+      accessToken: null,
+      refreshToken: null,
+    };
+
+    const user = await models.User.create(userData);
 
     const token = generateToken({
       id: user.id,
@@ -73,10 +79,10 @@ router.post('/register', async (req, res) => {
       name: user.name,
     });
 
-    res.json({ token });
+    return res.json({ token });
   } catch (error) {
     console.error('Registration error:', error);
-    res.status(500).json({ message: 'Error creating user' });
+    return res.status(500).json({ message: 'Error creating user' });
   }
 });
 
@@ -121,7 +127,7 @@ router.post('/register', async (req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.post('/login', async (req, res) => {
+router.post('/login', async (req, res): Promise<Response> => {
   try {
     const { email, password } = req.body;
 
@@ -141,10 +147,10 @@ router.post('/login', async (req, res) => {
       name: user.name,
     });
 
-    res.json({ token });
+    return res.json({ token });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Error during login' });
+    return res.status(500).json({ message: 'Error during login' });
   }
 });
 
@@ -190,7 +196,7 @@ router.get('/google', (_req, res) => {
  *             schema:
  *               $ref: '#/components/schemas/Error'
  */
-router.get('/google/callback', async (req: AuthRequest, res) => {
+router.get('/google/callback', async (req: AuthRequest, res): Promise<Response | void> => {
   try {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
@@ -212,18 +218,21 @@ router.get('/google/callback', async (req: AuthRequest, res) => {
     });
 
     if (!user) {
-      user = await models.User.create({
+      const userData: UserCreationAttributes = {
         googleId: userInfo.sub,
         email: userInfo.email,
         name: userInfo.name,
-        picture: userInfo.picture,
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
-      });
+        picture: userInfo.picture || null,
+        accessToken: tokens.access_token || null,
+        refreshToken: tokens.refresh_token || null,
+        password: null,
+      };
+
+      user = await models.User.create(userData);
     } else {
       await user.update({
-        accessToken: tokens.access_token,
-        refreshToken: tokens.refresh_token,
+        accessToken: tokens.access_token || null,
+        refreshToken: tokens.refresh_token || null,
       });
     }
 
@@ -234,10 +243,10 @@ router.get('/google/callback', async (req: AuthRequest, res) => {
     });
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
+    return res.redirect(`${process.env.FRONTEND_URL}/auth/callback?token=${token}`);
   } catch (error) {
     console.error('Google auth error:', error);
-    res.status(500).json({ message: 'Error during Google authentication' });
+    return res.status(500).json({ message: 'Error during Google authentication' });
   }
 });
 

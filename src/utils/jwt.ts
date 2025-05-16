@@ -1,15 +1,17 @@
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import config from '../config/app';
 import { JWTPayload } from '../middleware/auth.types';
-import { TokenVerificationResult } from './jwt.types';
 
 export const generateToken = (payload: JWTPayload): string => {
-  return jwt.sign(payload, config.jwt.secret, { expiresIn: config.jwt.expiresIn });
+  const options: SignOptions = {
+    expiresIn: config.jwt.expiresIn as jwt.SignOptions['expiresIn'],
+  };
+  return jwt.sign(payload as object, config.jwt.secret, options);
 };
 
-export const verifyToken = (token: string): any => {
+export const verifyToken = (token: string): JWTPayload | null => {
   try {
-    return jwt.verify(token, process.env.JWT_SECRET || 'your_jwt_secret');
+    return jwt.verify(token, config.jwt.secret) as JWTPayload;
   } catch {
     return null;
   }

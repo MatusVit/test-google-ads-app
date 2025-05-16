@@ -1,18 +1,17 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import { CampaignAttributes } from './campaign.types';
+import { CampaignAttributes, CampaignCreationAttributes, CampaignInstance } from './campaign.types';
 
-export class Campaign extends Model<CampaignAttributes> implements CampaignAttributes {
-  public id!: number;
-  public managedAccountId!: number;
-  public campaignId!: string;
-  public name!: string;
-  public status!: string;
-  public budget!: number;
-  public startDate!: Date;
-  public endDate!: Date;
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+export class Campaign extends Model<CampaignAttributes, CampaignCreationAttributes> implements CampaignInstance {
+  declare id: number;
+  declare managedAccountId: number;
+  declare campaignId: string;
+  declare name: string;
+  declare status: string;
+  declare budget: number;
+  declare startDate: Date;
+  declare endDate: Date;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
   static associate(models: any) {
     Campaign.belongsTo(models.ManagedAccount, {
@@ -48,15 +47,27 @@ export default function (sequelize: Sequelize): typeof Campaign {
       },
       status: {
         type: DataTypes.STRING,
+        allowNull: false,
       },
       budget: {
         type: DataTypes.DECIMAL(10, 2),
+        allowNull: false,
       },
       startDate: {
         type: DataTypes.DATE,
+        allowNull: false,
       },
       endDate: {
         type: DataTypes.DATE,
+        allowNull: false,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
     },
     {

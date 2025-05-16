@@ -1,37 +1,29 @@
-import express from 'express';
+import express, { Response } from 'express';
 import { google } from 'googleapis';
 import models from '../models';
+import { AuthRequest } from '../middleware/auth.types';
+import { CampaignCreationAttributes } from '../models/campaign.types';
+import { ManagedAccountInstance } from '../models/managed-account.types';
+import config from '../config/app';
 
 const router = express.Router();
 
-// Middleware to check if user is authenticated
-const isAuthenticated = (
-  req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-) => {
-  if (req.isAuthenticated()) {
-    return next();
-  }
-  res.status(401).json({ error: 'Unauthorized' });
-};
-
 // Get all campaigns for a managed account
-router.get('/:managedAccountId', isAuthenticated, async (req, res) => {
+router.get('/:managedAccountId', async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
     const campaigns = await models.Campaign.findAll({
       where: { managedAccountId: req.params.managedAccountId },
       include: [{ model: models.ManagedAccount, as: 'managedAccount' }],
     });
-    res.json(campaigns);
+    return res.json(campaigns);
   } catch (error) {
     console.error(error?.message);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Create a new campaign
-router.post('/:managedAccountId', isAuthenticated, async (req, res) => {
+router.post('/:managedAccountId', async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
     const managedAccount = await models.ManagedAccount.findByPk(req.params.managedAccountId);
     if (!managedAccount) {
@@ -44,13 +36,14 @@ router.post('/:managedAccountId', isAuthenticated, async (req, res) => {
       refresh_token: managedAccount.refreshToken,
     });
 
-    const adsService = google.ads({
-      version: 'v14',
-      auth: auth,
+    const adsService = (google as any).adwords({
+      version: config.google.adsApiVersion,
+      auth,
+      developerToken: config.google.adsDeveloperToken,
     });
 
     // Create campaign in Google Ads
-    const response = await adsService.customers.campaigns.create({
+    const response = await adsService.campaigns.create({
       customerId: managedAccount.adsAccountId,
       requestBody: {
         campaign: {
@@ -64,7 +57,7 @@ router.post('/:managedAccountId', isAuthenticated, async (req, res) => {
     });
 
     // Save campaign to database
-    const campaign = await models.Campaign.create({
+    const campaignData: CampaignCreationAttributes = {
       managedAccountId: managedAccount.id,
       campaignId: response.data.id,
       name: req.body.name,
@@ -72,17 +65,18 @@ router.post('/:managedAccountId', isAuthenticated, async (req, res) => {
       budget: req.body.budget,
       startDate: req.body.startDate,
       endDate: req.body.endDate,
-    });
+    };
 
-    res.status(201).json(campaign);
+    const campaign = await models.Campaign.create(campaignData);
+    return res.status(201).json(campaign);
   } catch (error) {
     console.error('Error creating campaign:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // Delete a campaign
-router.delete('/:managedAccountId/:campaignId', isAuthenticated, async (req, res) => {
+router.delete('/:managedAccountId/:campaignId', async (req: AuthRequest, res: Response): Promise<Response> => {
   try {
     const campaign = await models.Campaign.findOne({
       where: {
@@ -96,29 +90,35 @@ router.delete('/:managedAccountId/:campaignId', isAuthenticated, async (req, res
       return res.status(404).json({ error: 'Campaign not found' });
     }
 
+    const managedAccount = campaign.get('managedAccount') as ManagedAccountInstance;
+    if (!managedAccount) {
+      return res.status(404).json({ error: 'Managed account not found' });
+    }
+
     const auth = new google.auth.OAuth2();
     auth.setCredentials({
-      access_token: campaign.managedAccount.accessToken,
-      refresh_token: campaign.managedAccount.refreshToken,
+      access_token: managedAccount.accessToken,
+      refresh_token: managedAccount.refreshToken,
     });
 
-    const adsService = google.ads({
-      version: 'v14',
-      auth: auth,
+    const adsService = (google as any).adwords({
+      version: config.google.adsApiVersion,
+      auth,
+      developerToken: config.google.adsDeveloperToken,
     });
 
     // Delete campaign in Google Ads
-    await adsService.customers.campaigns.delete({
-      name: `customers/${campaign.managedAccount.adsAccountId}/campaigns/${campaign.campaignId}`,
+    await adsService.campaigns.delete({
+      name: `customers/${managedAccount.adsAccountId}/campaigns/${campaign.campaignId}`,
     });
 
     // Delete campaign from database
     await campaign.destroy();
 
-    res.status(204).send();
+    return res.status(204).send();
   } catch (error) {
     console.error('Error deleting campaign:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 });
 

@@ -13,7 +13,9 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "format": "prettier --write \"src/**/*.ts\"",
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down"
   },
   "dependencies": {
     "axios": "^1.4.0",

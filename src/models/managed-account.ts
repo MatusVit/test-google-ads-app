@@ -1,20 +1,16 @@
 import { Model, DataTypes, Sequelize } from 'sequelize';
-import { ManagedAccountAttributes } from './managed-account.types';
+import { ManagedAccountAttributes, ManagedAccountCreationAttributes, ManagedAccountInstance } from './managed-account.types';
 
-export class ManagedAccount
-  extends Model<ManagedAccountAttributes>
-  implements ManagedAccountAttributes
-{
-  public id!: number;
-  public userId!: number;
-  public managedGoogleId!: string;
-  public managedEmail!: string;
-  public accessToken!: string;
-  public refreshToken!: string;
-  public adsAccountId!: string;
-
-  public readonly createdAt!: Date;
-  public readonly updatedAt!: Date;
+export class ManagedAccount extends Model<ManagedAccountAttributes, ManagedAccountCreationAttributes> implements ManagedAccountInstance {
+  declare id: number;
+  declare userId: number;
+  declare managedGoogleId: string;
+  declare managedEmail: string;
+  declare accessToken: string | null;
+  declare refreshToken: string | null;
+  declare adsAccountId: string | null;
+  declare readonly createdAt: Date;
+  declare readonly updatedAt: Date;
 
   static associate(models: any) {
     ManagedAccount.belongsTo(models.User, {
@@ -54,12 +50,23 @@ export default function (sequelize: Sequelize): typeof ManagedAccount {
       },
       accessToken: {
         type: DataTypes.TEXT,
+        allowNull: true,
       },
       refreshToken: {
         type: DataTypes.TEXT,
+        allowNull: true,
       },
       adsAccountId: {
         type: DataTypes.STRING,
+        allowNull: true,
+      },
+      createdAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
+      },
+      updatedAt: {
+        type: DataTypes.DATE,
+        allowNull: false,
       },
     },
     {

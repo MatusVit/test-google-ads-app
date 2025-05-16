@@ -2,9 +2,10 @@ import { Sequelize } from 'sequelize';
 import User from './user';
 import ManagedAccount from './managed-account';
 import Campaign from './campaign';
-import databaseConfig from '../config/database.js';
+import databaseConfig from '../config/database';
 
-const env = process.env.NODE_ENV || 'development';
+type Environment = 'development' | 'test' | 'production';
+const env = (process.env.NODE_ENV || 'development') as Environment;
 const config = databaseConfig[env];
 
 const sequelize = new Sequelize(config.database, config.username, config.password, {

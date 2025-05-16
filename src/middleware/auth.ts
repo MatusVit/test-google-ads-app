@@ -3,7 +3,7 @@ import { verifyToken, extractToken } from '../utils/jwt';
 import models from '../models';
 import { AuthRequest, JWTPayload } from './auth.types';
 
-export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const authenticate = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void | Response> => {
   const token = extractToken(req.headers.authorization);
   if (!token) {
     return res.status(401).json({ message: 'No token provided' });

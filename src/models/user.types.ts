@@ -1,16 +1,20 @@
-import { Model } from 'sequelize';
+import { Model, Optional } from 'sequelize';
 
-export interface UserAttributes extends Model {
+export interface UserAttributes {
   id: number;
-  googleId?: string;
+  googleId: string | null;
   email: string;
-  password?: string;
+  password: string | null;
   name: string;
-  picture?: string;
-  accessToken?: string;
-  refreshToken?: string;
+  picture: string | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-export interface UserCreationAttributes extends Omit<UserAttributes, 'id'> {
-  id?: number;
+export type UserCreationAttributes = Optional<UserAttributes, 'id' | 'createdAt' | 'updatedAt' | 'googleId' | 'password' | 'picture' | 'accessToken' | 'refreshToken'>;
+
+export interface UserInstance extends Model<UserAttributes, UserCreationAttributes>, UserAttributes {
+  comparePassword(candidatePassword: string): Promise<boolean>;
 }
