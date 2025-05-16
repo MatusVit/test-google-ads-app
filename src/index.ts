@@ -9,6 +9,7 @@ import campaignRoutes from './routes/campaigns';
 import managedAccountRoutes from './routes/managed-accounts';
 import swaggerUi from 'swagger-ui-express';
 import { swaggerSpec } from './config/swagger';
+import { requestLogger } from './middleware/logger';
 
 const app = express();
 
@@ -16,6 +17,9 @@ const app = express();
 app.use(helmet());
 app.use(cors());
 app.use(express.json());
+
+// Подключаем логгер запросов
+app.use(requestLogger);
 
 // Swagger documentation
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec));

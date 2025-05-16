@@ -24,6 +24,7 @@ export interface Config {
     clientId: string;
     clientSecret: string;
     callbackUrl: string;
+    managedAccountsCallbackUrl: string;
     adsApiVersion: string;
     adsDeveloperToken: string;
   };

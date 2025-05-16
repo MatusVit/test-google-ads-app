@@ -46,7 +46,8 @@ const config: Config = {
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID || '',
     clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
-    callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback',
+    callbackUrl: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000',
+    managedAccountsCallbackUrl: process.env.GOOGLE_MANAGED_ACCOUNTS_CALLBACK_URL || 'http://localhost:3000/managed-accounts/callback',
     adsApiVersion: process.env.GOOGLE_ADS_API_VERSION || 'v14',
     adsDeveloperToken: process.env.GOOGLE_ADS_DEVELOPER_TOKEN || '',
   },

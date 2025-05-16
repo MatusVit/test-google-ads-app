@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Auth Example</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .login-btn {
+            background-color: #4285f4;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .login-btn:hover {
+            background-color: #357abd;
+        }
+        .user-info {
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            display: none;
+        }
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Google Auth Example</h1>
+    
+    <!-- Login Button -->
+    <button id="loginBtn" class="login-btn">
+        <img src="https://www.google.com/favicon.ico" width="20" height="20" alt="Google">
+        Sign in with Google
+    </button>
+
+    <!-- User Info (hidden by default) -->
+    <div id="userInfo" class="user-info">
+        <img id="userAvatar" class="user-avatar" src="" alt="User avatar">
+        <h3 id="userName"></h3>
+        <p id="userEmail"></p>
+        <button id="logoutBtn" onclick="logout()">Logout</button>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3000';
+        let authWindow = null;
+
+        // Проверяем, есть ли сохраненный токен
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('token');
+            if (token) {
+                fetchUserInfo(token);
+            }
+        });
+
+        // Начало процесса авторизации
+        document.getElementById('loginBtn').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`${API_URL}/auth/google`);
+                const { url } = await response.json();
+                
+                // Открываем окно авторизации
+                authWindow = window.open(
+                    url,
+                    'Google Login',
+                    'width=500,height=600,scrollbars=yes'
+                );
+
+                // Слушаем сообщения от окна авторизации
+                window.addEventListener('message', handleAuthMessage);
+            } catch (error) {
+                console.error('Error starting auth:', error);
+            }
+        });
+
+        // Обработка сообщений от окна авторизации
+        function handleAuthMessage(event) {
+            if (event.origin !== API_URL) return;
+            
+            const { token, user } = event.data;
+            if (token) {
+                localStorage.setItem('token', token);
+                displayUserInfo(user);
+                if (authWindow) {
+                    authWindow.close();
+                }
+            }
+        }
+
+        // Получение информации о пользователе
+        async function fetchUserInfo(token) {
+            try {
+                const response = await fetch(`${API_URL}/auth/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    displayUserInfo(user);
+                } else {
+                    localStorage.removeItem('token');
+                }
+            } catch (error) {
+                console.error('Error fetching user info:', error);
+                localStorage.removeItem('token');
+            }
+        }
+
+        // Отображение информации о пользователе
+        function displayUserInfo(user) {
+            document.getElementById('loginBtn').style.display = 'none';
+            document.getElementById('userInfo').style.display = 'block';
+            document.getElementById('userAvatar').src = user.picture;
+            document.getElementById('userName').textContent = user.name;
+            document.getElementById('userEmail').textContent = user.email;
+        }
+
+        // Выход из системы
+        function logout() {
+            localStorage.removeItem('token');
+            document.getElementById('loginBtn').style.display = 'block';
+            document.getElementById('userInfo').style.display = 'none';
+        }
+    </script>
+</body>
+</html> 
