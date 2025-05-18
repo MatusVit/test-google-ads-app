@@ -177,7 +177,7 @@ router.post('/login', async (req, res): Promise<Response> => {
  *                   type: string
  */
 router.get('/google', (_req, res) => {
-  const authUrl = getGoogleAuthUrl(`${config.google.callbackUrl}/auth/google/callback`);
+  const authUrl = getGoogleAuthUrl(config.google.callbackUrl);
   res.json({ url: authUrl });
 });
 

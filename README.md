@@ -41,7 +41,7 @@ DB_NAME=google_ads_db
 # Google OAuth
 GOOGLE_CLIENT_ID=your_client_id
 GOOGLE_CLIENT_SECRET=your_client_secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+GOOGLE_CALLBACK_URL=http://localhost:3000
 
 # Session
 SESSION_SECRET=your_session_secret

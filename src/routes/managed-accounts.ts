@@ -1,7 +1,11 @@
 import { Router, Response } from 'express';
 import { authenticate } from '../middleware/auth';
 import { getGoogleAuthUrl, getGoogleTokens, getGoogleUserInfo } from '../utils/google-auth';
-import { checkGoogleAdsAccount, listAccessibleAccounts, checkAccountAccess } from '../utils/google-ads';
+import {
+  checkGoogleAdsAccount,
+  listAccessibleAccounts,
+  checkAccountAccess,
+} from '../utils/google-ads';
 import models from '../models';
 import { AuthRequest } from '../middleware/auth.types';
 import { ManagedAccountCreationAttributes } from '../models/managed-account.types';
@@ -74,7 +78,7 @@ router.get('/', authenticate, async (req: AuthRequest, res) => {
  *         description: Unauthorized
  */
 router.get('/auth-url', authenticate, (_req, res) => {
-  const authUrl = getGoogleAuthUrl(`${config.google.callbackUrl}/managed-accounts/callback`);
+  const authUrl = getGoogleAuthUrl(config.google.managedAccountsCallbackUrl);
   res.json({ url: authUrl });
 });
 
@@ -121,54 +125,82 @@ router.get('/callback', async (req: AuthRequest, res: Response): Promise<Respons
   try {
     const { code } = req.query;
     if (!code || typeof code !== 'string') {
-      return res.status(400).json({ message: 'Invalid authorization code' });
-    }
-
-    // Получаем токены
-    const tokens = await getGoogleTokens(code);
-    if (!tokens.access_token || !tokens.id_token) {
-      return res.status(400).json({ message: 'Invalid tokens received' });
-    }
-
-    // Получаем информацию о пользователе
-    const userInfo = await getGoogleUserInfo(tokens.id_token);
-    if (!userInfo) {
-      return res.status(400).json({ message: 'Could not get user information' });
-    }
-
-    // Получаем список доступных аккаунтов
-    const accounts = await listAccessibleAccounts(tokens.access_token);
-    
-    if (accounts.length === 0) {
-      return res.status(400).json({ 
-        message: 'No Google Ads accounts found',
-        createAccountUrl: 'https://ads.google.com/nav/selectaccount'
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid authorization code',
+        error: 'INVALID_CODE',
       });
     }
 
-    // Сохраняем токены во временное хранилище (можно использовать Redis)
-    // TODO: Implement temporary token storage
+    // Get tokens
+    const tokens = await getGoogleTokens(
+      code as string,
+      config.google.managedAccountsCallbackUrl
+    );
+    if (!tokens?.access_token || !tokens?.id_token) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid tokens received from Google',
+        error: 'INVALID_TOKENS',
+      });
+    }
+
+    // Get user information
+    const userInfo = await getGoogleUserInfo(tokens.id_token);
+    if (!userInfo?.email || !userInfo?.name) {
+      return res.status(400).json({
+        success: false,
+        message: 'Could not get user information',
+        error: 'USER_INFO_ERROR',
+      });
+    }
+
+    // Get list of available accounts
+    const accounts = await listAccessibleAccounts(tokens.access_token);
+    
+    if (accounts.length === 0) {
+      return res.status(200).json({
+        success: true,
+        hasAccounts: false,
+        userInfo: {
+          email: userInfo.email,
+          name: userInfo.name,
+          picture: userInfo.picture || null,
+        },
+        createAccountUrl: 'https://ads.google.com/nav/selectaccount',
+        message: 'No Google Ads accounts found. Please create one first.',
+      });
+    }
+
+    // Save tokens temporarily (you should implement proper temporary storage)
     const tempAuthKey = Math.random().toString(36).substring(7);
     
     return res.json({
-      tempAuthKey, // Временный ключ для последующей авторизации
+      success: true,
+      hasAccounts: true,
+      tempAuthKey,
       userInfo: {
         email: userInfo.email,
         name: userInfo.name,
-        picture: userInfo.picture
+        picture: userInfo.picture || null,
       },
       accounts: accounts.map(account => ({
         customerId: account.customerId,
         descriptiveName: account.descriptiveName,
         currencyCode: account.currencyCode,
         timeZone: account.timeZone,
-        status: account.status
-      }))
+        status: account.status,
+        accessLevel: 'PENDING_VERIFICATION', // Will be verified when account is selected
+      })),
     });
 
   } catch (error) {
     console.error('Error in OAuth callback:', error);
-    return res.status(500).json({ message: 'Error processing callback' });
+    return res.status(500).json({
+      success: false,
+      message: 'Error processing Google authentication',
+      error: 'INTERNAL_ERROR',
+    });
   }
 });
 

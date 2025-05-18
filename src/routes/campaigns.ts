@@ -1,12 +1,16 @@
-import express, { Response } from 'express';
-import { google } from 'googleapis';
-import models from '../models';
+import { Router, Response } from 'express';
+import { authenticate } from '../middleware/auth';
 import { AuthRequest } from '../middleware/auth.types';
+import models from '../models';
 import { CampaignCreationAttributes } from '../models/campaign.types';
 import { ManagedAccountInstance } from '../models/managed-account.types';
 import config from '../config/app';
 
-const router = express.Router();
+// @ts-expect-error - Dynamic import of CommonJS module
+const googleAdsApi = await import('google-ads-api');
+const { Client } = googleAdsApi.default;
+
+const router = Router();
 
 // Get all campaigns for a managed account
 router.get('/:managedAccountId', async (req: AuthRequest, res: Response): Promise<Response> => {
@@ -30,28 +34,29 @@ router.post('/:managedAccountId', async (req: AuthRequest, res: Response): Promi
       return res.status(404).json({ error: 'Managed account not found' });
     }
 
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({
-      access_token: managedAccount.accessToken,
-      refresh_token: managedAccount.refreshToken,
+    const client = new Client({
+      client_id: config.google.clientId,
+      client_secret: config.google.clientSecret,
+      developer_token: config.google.adsDeveloperToken,
     });
 
-    const adsService = (google as any).adwords({
-      version: config.google.adsApiVersion,
-      auth,
-      developerToken: config.google.adsDeveloperToken,
-    });
+    client.setAccessToken(managedAccount.accessToken);
 
     // Create campaign in Google Ads
-    const response = await adsService.campaigns.create({
+    const response = await client.mutateResource({
       customerId: managedAccount.adsAccountId,
-      requestBody: {
+      resource: 'campaigns',
+      operation: 'create',
+      params: {
         campaign: {
           name: req.body.name,
           status: req.body.status,
-          budget: req.body.budget,
-          startDate: req.body.startDate,
-          endDate: req.body.endDate,
+          advertisingChannelType: 'SEARCH',
+          campaignBudget: {
+            amountMicros: Math.round(req.body.budget * 1000000),
+          },
+          startDate: req.body.startDate.replace(/-/g, ''),
+          endDate: req.body.endDate ? req.body.endDate.replace(/-/g, '') : undefined,
         },
       },
     });
@@ -59,7 +64,7 @@ router.post('/:managedAccountId', async (req: AuthRequest, res: Response): Promi
     // Save campaign to database
     const campaignData: CampaignCreationAttributes = {
       managedAccountId: managedAccount.id,
-      campaignId: response.data.id,
+      campaignId: response.results[0].resourceName.split('/').pop(),
       name: req.body.name,
       status: req.body.status,
       budget: req.body.budget,
@@ -76,50 +81,54 @@ router.post('/:managedAccountId', async (req: AuthRequest, res: Response): Promi
 });
 
 // Delete a campaign
-router.delete('/:managedAccountId/:campaignId', async (req: AuthRequest, res: Response): Promise<Response> => {
-  try {
-    const campaign = await models.Campaign.findOne({
-      where: {
-        managedAccountId: req.params.managedAccountId,
-        campaignId: req.params.campaignId,
-      },
-      include: [{ model: models.ManagedAccount, as: 'managedAccount' }],
-    });
+router.delete(
+  '/:managedAccountId/:campaignId',
+  async (req: AuthRequest, res: Response): Promise<Response> => {
+    try {
+      const campaign = await models.Campaign.findOne({
+        where: {
+          managedAccountId: req.params.managedAccountId,
+          campaignId: req.params.campaignId,
+        },
+        include: [{ model: models.ManagedAccount, as: 'managedAccount' }],
+      });
 
-    if (!campaign) {
-      return res.status(404).json({ error: 'Campaign not found' });
+      if (!campaign) {
+        return res.status(404).json({ error: 'Campaign not found' });
+      }
+
+      const managedAccount = campaign.get('managedAccount') as ManagedAccountInstance;
+      if (!managedAccount) {
+        return res.status(404).json({ error: 'Managed account not found' });
+      }
+
+      const client = new Client({
+        client_id: config.google.clientId,
+        client_secret: config.google.clientSecret,
+        developer_token: config.google.adsDeveloperToken,
+      });
+
+      client.setAccessToken(managedAccount.accessToken);
+
+      // Delete campaign in Google Ads
+      await client.mutateResource({
+        customerId: managedAccount.adsAccountId,
+        resource: 'campaigns',
+        operation: 'remove',
+        params: {
+          resourceName: `customers/${managedAccount.adsAccountId}/campaigns/${campaign.campaignId}`,
+        },
+      });
+
+      // Delete campaign from database
+      await campaign.destroy();
+
+      return res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting campaign:', error);
+      return res.status(500).json({ error: 'Internal server error' });
     }
-
-    const managedAccount = campaign.get('managedAccount') as ManagedAccountInstance;
-    if (!managedAccount) {
-      return res.status(404).json({ error: 'Managed account not found' });
-    }
-
-    const auth = new google.auth.OAuth2();
-    auth.setCredentials({
-      access_token: managedAccount.accessToken,
-      refresh_token: managedAccount.refreshToken,
-    });
-
-    const adsService = (google as any).adwords({
-      version: config.google.adsApiVersion,
-      auth,
-      developerToken: config.google.adsDeveloperToken,
-    });
-
-    // Delete campaign in Google Ads
-    await adsService.campaigns.delete({
-      name: `customers/${managedAccount.adsAccountId}/campaigns/${campaign.campaignId}`,
-    });
-
-    // Delete campaign from database
-    await campaign.destroy();
-
-    return res.status(204).send();
-  } catch (error) {
-    console.error('Error deleting campaign:', error);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+  },
+);
 
 export default router;

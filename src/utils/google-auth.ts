@@ -15,23 +15,26 @@ export const getGoogleAuthUrl = (callbackUrl: string): string => {
     redirectUri: callbackUrl,
   });
 
-  const scopes = [
-    'https://www.googleapis.com/auth/userinfo.profile',
-    'https://www.googleapis.com/auth/userinfo.email',
-    'https://www.googleapis.com/auth/adwords',
-  ];
+  const scopes = ['openid', 'profile', 'email', 'https://www.googleapis.com/auth/adwords'].join(' ');
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline',
     scope: scopes,
     prompt: 'consent',
     include_granted_scopes: true,
-    test_mode: true
+    state: Math.random().toString(36).substring(7),
+    response_type: 'code',
   });
 };
 
-export const getGoogleTokens = async (code: string): Promise<GoogleTokens> => {
-  const { tokens } = await client.getToken(code);
+export const getGoogleTokens = async (code: string, callbackUrl: string): Promise<GoogleTokens> => {
+  const oauth2Client = new OAuth2Client({
+    clientId: config.google.clientId,
+    clientSecret: config.google.clientSecret,
+    redirectUri: callbackUrl,
+  });
+
+  const { tokens } = await oauth2Client.getToken(code);
   return {
     access_token: tokens.access_token || undefined,
     refresh_token: tokens.refresh_token || undefined,
@@ -40,8 +43,13 @@ export const getGoogleTokens = async (code: string): Promise<GoogleTokens> => {
 };
 
 export const getGoogleUserInfo = async (idToken: string): Promise<GoogleUserInfo | null> => {
+  const oauth2Client = new OAuth2Client({
+    clientId: config.google.clientId,
+    clientSecret: config.google.clientSecret,
+  });
+
   try {
-    const ticket = await client.verifyIdToken({
+    const ticket = await oauth2Client.verifyIdToken({
       idToken,
       audience: config.google.clientId,
     });
